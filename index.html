@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lotki — Solver</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pricedown&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: 'Pricedown', Impact, sans-serif;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .title {
+      font-size: 2.6rem;
+      margin: 25px 0;
+      color: #FFD700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.5);
+      text-align: center;
+    }
+    .section {
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    .subtitle {
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+      color: #FFD700;
+    }
+    .instructions p,
+    .instructions li {
+      font-size: 1.05rem;
+      margin: 8px 0;
+    }
+    .dartboard-container {
+      text-align: center;
+      margin: 25px 0;
+    }
+    .dartboard-svg {
+      width: 100%;
+      max-width: 460px;
+      height: auto;
+      cursor: pointer;
+    }
+    .game-controls {
+      text-align: center;
+      margin: 25px 0;
+    }
+    .info-box {
+      background: #333;
+      border: 1px solid #555;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 15px auto;
+    }
+    .throws-list {
+      text-align: left;
+      margin-top: 12px;
+      padding-left: 20px;
+    }
+    .throws-list li {
+      margin: 6px 0;
+      font-size: 1.05rem;
+    }
+    .btn {
+      background: #C9F158;
+      color: #000;
+      border: none;
+      padding: 10px 22px;
+      font-size: 1.15rem;
+      font-family: 'Pricedown', sans-serif;
+      cursor: pointer;
+      border-radius: 4px;
+      margin: 6px;
+      transition: all 0.2s;
+    }
+    .btn:hover:not(:disabled) {
+      background: #b0d945;
+      transform: scale(1.03);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .result {
+      font-size: 1.5rem;
+      margin: 18px 0;
+      padding: 12px;
+      background: #333;
+      border-radius: 6px;
+      min-height: 2.4rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">Lotki — Solver</h1>
+
+    <div class="section instructions">
+      <h2 class="subtitle">Jak działa minigra (na podstawie przesłanego pliku JS)</h2>
+      <p>
+        Minigra polega na obliczeniu wyniku rzutu w rzutkę (lotki), zgodnie z regułami podobnymi do prawdziwej gry.
+      </p>
+      <p>
+        1. Plansza składa się z 20 sektorów numerowanych od 1 do 20 (w kolejności: 20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5 — zaczynając od góry i w prawo).
+      </p>
+      <p>
+        2. Każdy rzut składa się z trzech elementów:
+      </p>
+      <ul style="margin-left: 30px; margin-top: 8px;">
+        <li><strong>Pierścień (ring):</strong>
+          <ul style="margin-top: 4px; margin-left: 20px;">
+            <li>0 — bullseye (50 pkt)</li>
+            <li>1 — inner bull (25 pkt)</li>
+            <li>2 — single (×1)</li>
+            <li>3 — double (×2)</li>
+            <li>4 — triple (×3)</li>
+          </ul>
+        </li>
+        <li><strong>Numer sektora</strong> (1–20, lub 50/25 dla bulla)</li>
+        <li><strong>Operacja:</strong> add, subtract, multiply, divide</li>
+      </ul>
+      <p>
+        3. Dla każdego rzutu obliczana jest wartość:
+      </p>
+      <ul style="margin-left: 30px;">
+        <li>bullseye → 50</li>
+        <li>inner bull → 25</li>
+        <li>single X → X</li>
+        <li>double X → 2 × X</li>
+        <li>triple X → 3 × X</li>
+      </ul>
+      <p>
+        4. Operacje są wykonywane sekwencyjnie (od lewej do prawej), zgodnie z kolejnością rzutów.
+      </p>
+      <p>
+        5. Po obliczeniu wyniku może być zastosowany modyfikator, np. <strong>"square"</strong> — wtedy wynik jest podnoszony do kwadratu.
+      </p>
+      <p>
+        6. Gracz musi podać poprawną liczbę — np. dla rzutów: triple 20 (add), bullseye (add), wynik to (20×3 + 50) = 110; jeśli modyfikator to "square", wynik to 110² = 12100.
+      </p>
+    </div>
+
+    <div class="section">
+      <h2 class="subtitle">Instrukcja obsługi solvera</h2>
+      <p>
+        — Kliknij dowolny segment planszy, aby dodać rzut z domyślną operacją <strong>dodawania (pomarańczowy)</strong>.
+      </p>
+      <p>
+        — Kolejne kliknięcia w ten sam segment zmieniają operację w cyklu:  
+        <strong>dodawanie → odejmowanie → mnożenie → dzielenie → reset (usuwa rzut)</strong>.
+      </p>
+      <p>
+        — Kolory operacji:  
+        pomarańczowy = dodawanie, czerwony = odejmowanie, zielony = mnożenie, niebieski = dzielenie.
+      </p>
+      <p>
+        — Kliknij <strong>środek planszy (bullseye)</strong>, aby włączyć/wyłączyć modyfikator „do kwadratu” — zmienia on kolor na fioletowy i wyświetla symbol <strong>²</strong>.
+      </p>
+    </div>
+
+    <div class="dartboard-container" id="dartboardContainer">
+      <!-- SVG inserted by JS -->
+    </div>
+
+    <div class="game-controls">
+      <div class="info-box">
+        Wybrane rzuty:
+        <ul class="throws-list" id="throwsList"></ul>
+      </div>
+
+      <div class="result" id="resultBox">Kliknij segmenty planszy, aby zacząć</div>
+
+      <button class="btn" id="calculateBtn" disabled>Oblicz wynik</button>
+      <button class="btn" id="clearBtn">Wyczyść wszystko</button>
+    </div>
+  </div>
+
+  <script>
+    // Game logic
+    const dd = [20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+    const ops = ['add', 'subtract', 'multiply', 'divide', null];
+    const opColors = {
+      add: '#FF8C00',
+      subtract: '#DC143C',
+      multiply: '#32CD32',
+      divide: '#4169E1',
+      null: 'none'
+    };
+    const opSymbols = {
+      add: '+',
+      subtract: '−',
+      multiply: '×',
+      divide: '÷',
+      null: ''
+    };
+
+    let throws = [];
+    let modifier = null;
+
+    const Ft = 230;
+    const Vt = {
+      bullseye: 12,
+      innerBull: 20,
+      ring1: 75,
+      ring2: 90,
+      ring3: 160,
+      ring4: 175,
+      numberRing: 230
+    };
+
+    function sectorPath(r1, r2, startDeg, endDeg, cx, cy) {
+      const startRad = startDeg * Math.PI / 180;
+      const endRad = endDeg * Math.PI / 180;
+      const largeArc = (endDeg - startDeg > 180) ? 1 : 0;
+
+      const x1 = cx + r1 * Math.cos(startRad);
+      const y1 = cy + r1 * Math.sin(startRad);
+      const x2 = cx + r2 * Math.cos(startRad);
+      const y2 = cy + r2 * Math.sin(startRad);
+      const x3 = cx + r2 * Math.cos(endRad);
+      const y3 = cy + r2 * Math.sin(endRad);
+      const x4 = cx + r1 * Math.cos(endRad);
+      const y4 = cy + r1 * Math.sin(endRad);
+
+      return `M ${x1} ${y1} L ${x2} ${y2} A ${r2} ${r2} 0 ${largeArc} 1 ${x3} ${y3} L ${x4} ${y4} A ${r1} ${r1} 0 ${largeArc} 0 ${x1} ${y1} Z`;
+    }
+
+    function renderDartboard() {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 460 460");
+      svg.setAttribute("class", "dartboard-svg");
+
+      const bgCircle = document.createElementNS(svg.namespaceURI, "circle");
+      bgCircle.setAttribute("cx", Ft);
+      bgCircle.setAttribute("cy", Ft);
+      bgCircle.setAttribute("r", Vt.numberRing);
+      bgCircle.setAttribute("fill", "#1a1a1a");
+      svg.appendChild(bgCircle);
+
+      for (let i = 0; i < 20; i++) {
+        const angleStart = i * 18 - 99;
+        const angleEnd = angleStart + 18;
+        const isEven = i % 2 === 0;
+
+        const rings = [
+          { r1: Vt.innerBull, r2: Vt.ring1, color: isEven ? '#1a1a1a' : '#f0f0e8' },
+          { r1: Vt.ring1, r2: Vt.ring2, color: isEven ? '#3a3a3a' : '#c8c0b0' },
+          { r1: Vt.ring2, r2: Vt.ring3, color: isEven ? '#1a1a1a' : '#f0f0e8' },
+          { r1: Vt.ring3, r2: Vt.ring4, color: isEven ? '#3a3a3a' : '#c8c0b0' }
+        ];
+
+        rings.forEach(({ r1, r2, color }, ringOffset) => {
+          const path = document.createElementNS(svg.namespaceURI, "path");
+          path.setAttribute("d", sectorPath(r1, r2, angleStart, angleEnd, Ft, Ft));
+          path.setAttribute("fill", color);
+          path.setAttribute("stroke", "#555");
+          path.setAttribute("stroke-width", "0.5");
+          path.dataset.ring = ringOffset + 2;
+          path.dataset.number = dd[i];
+          path.dataset.sector = 'number';
+          path.classList.add('segment');
+          svg.appendChild(path);
+        });
+
+        const midAngle = (i * 18 - 90) * Math.PI / 180;
+        const r = Vt.numberRing - 25;
+        const x = Ft + r * Math.cos(midAngle);
+        const y = Ft + r * Math.sin(midAngle);
+        const text = document.createElementNS(svg.namespaceURI, "text");
+        text.setAttribute("x", x);
+        text.setAttribute("y", y);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("dominant-baseline", "middle");
+        text.setAttribute("fill", "#f0f0e8");
+        text.setAttribute("font-size", "18");
+        text.setAttribute("font-weight", "bold");
+        text.setAttribute("font-family", "'Pricedown', 'Impact', sans-serif");
+        text.textContent = dd[i];
+        svg.appendChild(text);
+      }
+
+      // Inner bull
+      const innerBull = document.createElementNS(svg.namespaceURI, "circle");
+      innerBull.setAttribute("cx", Ft);
+      innerBull.setAttribute("cy", Ft);
+      innerBull.setAttribute("r", Vt.innerBull);
+      innerBull.setAttribute("fill", "#73797a");
+      innerBull.setAttribute("stroke", "#444");
+      innerBull.setAttribute("stroke-width", "0.5");
+      innerBull.dataset.ring = 1;
+      innerBull.dataset.sector = 'innerBull';
+      innerBull.classList.add('segment');
+      svg.appendChild(innerBull);
+
+      // Bullseye — MODIFIER TOGGLE
+      const bullseyeGroup = document.createElementNS(svg.namespaceURI, "g");
+      bullseyeGroup.classList.add('segment');
+      bullseyeGroup.dataset.ring = 0;
+      bullseyeGroup.dataset.sector = 'bullseye';
+
+      const bullseyeCircle = document.createElementNS(svg.namespaceURI, "circle");
+      bullseyeCircle.setAttribute("cx", Ft);
+      bullseyeCircle.setAttribute("cy", Ft);
+      bullseyeCircle.setAttribute("r", Vt.bullseye);
+      bullseyeCircle.setAttribute("fill", "#000");
+      bullseyeCircle.setAttribute("stroke", "#444");
+      bullseyeCircle.setAttribute("stroke-width", "0.5");
+      bullseyeCircle.classList.add('bullseye-fill');
+
+      const bullseyeText = document.createElementNS(svg.namespaceURI, "text");
+      bullseyeText.setAttribute("x", Ft);
+      bullseyeText.setAttribute("y", Ft + 1);
+      bullseyeText.setAttribute("text-anchor", "middle");
+      bullseyeText.setAttribute("dominant-baseline", "middle");
+      bullseyeText.setAttribute("fill", "#fff");
+      bullseyeText.setAttribute("font-size", "12");
+      bullseyeText.setAttribute("font-weight", "bold");
+      bullseyeText.classList.add('bullseye-modifier');
+      bullseyeText.textContent = "";
+
+      bullseyeGroup.appendChild(bullseyeCircle);
+      bullseyeGroup.appendChild(bullseyeText);
+      svg.appendChild(bullseyeGroup);
+
+      const container = document.getElementById('dartboardContainer');
+      container.innerHTML = '';
+      container.appendChild(svg);
+
+      document.querySelectorAll('.segment').forEach(seg => {
+        seg.addEventListener('click', onSegmentClick);
+      });
+    }
+
+    function resetSegmentColor(el) {
+      const sector = el.dataset.sector;
+      if (sector === 'bullseye') {
+        const circle = el.querySelector('.bullseye-fill');
+        const text = el.querySelector('.bullseye-modifier');
+        if (circle) circle.setAttribute('fill', '#000');
+        if (text) text.textContent = '';
+      } else if (sector === 'innerBull') {
+        el.style.fill = '#73797a';
+      } else {
+        const num = parseInt(el.dataset.number);
+        const idx = dd.indexOf(num);
+        el.style.fill = (idx % 2 === 0) ? '#1a1a1a' : '#f0f0e8';
+      }
+    }
+
+    function onSegmentClick(e) {
+      const el = e.currentTarget;
+      const sector = el.dataset.sector;
+
+      // Bullseye → toggle modifier
+      if (sector === 'bullseye') {
+        modifier = modifier === 'square' ? null : 'square';
+        
+        const circle = el.querySelector('.bullseye-fill');
+        const text = el.querySelector('.bullseye-modifier');
+        
+        if (modifier === 'square') {
+          circle.setAttribute('fill', '#9932CC');
+          text.textContent = '²';
+        } else {
+          circle.setAttribute('fill', '#000');
+          text.textContent = '';
+        }
+
+        if (throws.length > 0) {
+          const res = calculateResult();
+          displayResult(res);
+        }
+        return;
+      }
+
+      // Regular throw segment
+      const ring = parseInt(el.dataset.ring);
+      const number = sector === 'innerBull' ? 25 : parseInt(el.dataset.number);
+
+      const existingIndex = throws.findIndex(t => t.ring === ring && t.number === number);
+      if (existingIndex === -1) {
+        const newThrow = { ring, number, operation: 'add' };
+        throws.push(newThrow);
+        el.style.fill = opColors.add;
+      } else {
+        const currentOp = throws[existingIndex].operation;
+        const nextIndex = (ops.indexOf(currentOp) + 1) % ops.length;
+        const nextOp = ops[nextIndex];
+        if (nextOp === null) {
+          throws.splice(existingIndex, 1);
+          resetSegmentColor(el);
+        } else {
+          throws[existingIndex].operation = nextOp;
+          el.style.fill = opColors[nextOp];
+        }
+      }
+
+      updateUI();
+    }
+
+    function updateUI() {
+      const list = document.getElementById('throwsList');
+      list.innerHTML = '';
+      throws.forEach(t => {
+        const pts = t.ring === 0 ? 50 : t.ring === 1 ? 25 : t.number * (t.ring === 2 ? 1 : t.ring === 3 ? 2 : 3);
+        const sym = opSymbols[t.operation];
+        const li = document.createElement('li');
+        li.textContent = `${sym} ${pts} (pierścień: ${t.ring}, liczba: ${t.number})`;
+        list.appendChild(li);
+      });
+
+      const calcBtn = document.getElementById('calculateBtn');
+      calcBtn.disabled = throws.length === 0;
+    }
+
+    function calculateResult() {
+      if (throws.length === 0) return 0;
+
+      let result = 0;
+      throws.forEach(t => {
+        let pts = t.ring === 0 ? 50 : t.ring === 1 ? 25 : t.number * (
+          t.ring === 2 ? 1 :
+          t.ring === 3 ? 2 :
+          t.ring === 4 ? 3 : 0
+        );
+
+        switch (t.operation) {
+          case 'add': result += pts; break;
+          case 'subtract': result -= pts; break;
+          case 'multiply': result *= (pts === 0 ? 1 : pts); break;
+          case 'divide': result = (pts === 0 ? result : result / pts); break;
+        }
+      });
+
+      if (modifier === 'square') {
+        result = result * result;
+      }
+
+      return Math.round(result * 100) / 100;
+    }
+
+    function displayResult(value) {
+      const box = document.getElementById('resultBox');
+      box.textContent = `Wynik: ${value}`;
+    }
+
+    document.getElementById('calculateBtn').addEventListener('click', () => {
+      const res = calculateResult();
+      displayResult(res);
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      throws = [];
+      modifier = null;
+      document.querySelectorAll('.segment').forEach(resetSegmentColor);
+      updateUI();
+      document.getElementById('resultBox').textContent = 'Kliknij segmenty planszy, aby zacząć';
+    });
+
+    renderDartboard();
+    updateUI();
+  </script>
+</body>
+</html>
